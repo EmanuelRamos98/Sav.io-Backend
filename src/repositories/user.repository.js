@@ -12,6 +12,24 @@ class UserRepository {
             $or: [{ name: identifier }, { email: identifier }]
         });
     }
+
+    static async userVarificated(email){
+        const user_to_verify = await User.findOne({ email: email })
+        if (!user_to_verify) {
+            return next(new AppError('No se encontro el usuario a verificar', 404))
+        }
+        user_to_verify.emailVerificated = true
+        return await user_to_verify.save()
+    }
+
+    static async updatePassword(email, password){
+        const userUpdate = await User.findOne({ email })
+        if (!userUpdate) {
+            return next(new AppError('No se encontro el usuario a verificar', 404))
+        }
+        userUpdate.password = password
+        return await userUpdate.save()
+    }
 }
 
 export default UserRepository

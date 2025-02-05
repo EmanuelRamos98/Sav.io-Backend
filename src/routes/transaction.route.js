@@ -12,7 +12,7 @@ const transactionRoute = express.Router()
 
 transactionRoute.post('/', authMiddleware, addTransactionController)
 transactionRoute.post('/search', authMiddleware, getTransactionController)
-transactionRoute.put('/:id', authMiddleware, updateTransactionController)
-transactionRoute.delete('/:id', authMiddleware, deleteTransactionController)
+transactionRoute.put('/update/:id', authMiddleware, updateTransactionController)
+transactionRoute.delete('/delete/:id', authMiddleware, deleteTransactionController)
 
 export default transactionRoute 
