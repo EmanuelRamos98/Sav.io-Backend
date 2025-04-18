@@ -12,7 +12,7 @@ const recuperationEmail = async (email) => {
 
     const redirect_url = `${token_recuperation}`
 
-    const email = await trasnporterEmail.sendMail({
+    const send = await trasnporterEmail.sendMail({
         subject: 'Validacion',
         to: email,
         html:
@@ -22,7 +22,7 @@ const recuperationEmail = async (email) => {
             `
     })
 
-    return email
+    return send
 }
 
 export default recuperationEmail

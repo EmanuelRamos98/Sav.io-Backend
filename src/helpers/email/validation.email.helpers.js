@@ -4,14 +4,14 @@ import trasnporterEmail from './transporter.email.helpers.js'
 
 const validationEmail = async (email, name) => {
     const token_validation = jwt.sign(
-        {email: email},
+        { email: email },
         ENVIRONMENT.SECRET_KEY,
-        {expiresIn: '1d'}
+        { expiresIn: '1d' }
     )
 
     const redirect_url = `${token_validation}`
 
-    const email = await trasnporterEmail.sendMail({
+    const send = await trasnporterEmail.sendMail({
         subject: 'Validacion',
         to: email,
         html:
@@ -22,7 +22,7 @@ const validationEmail = async (email, name) => {
             `
     })
 
-    return email
+    return send
 }
 
 export default validationEmail

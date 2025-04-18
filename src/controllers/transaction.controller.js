@@ -34,15 +34,18 @@ export const addTransactionController = async (req, res, next) => {
             return next(new AppError('Errores de validacion', 400, errores))
         }
 
+        const amuntEnCentavos = Math.round(Number(amount) * 100)
+
         const newTransaction = {
             userId: userId,
             type: type,
             category: category,
-            amount: amount,
+            amount: amuntEnCentavos,
             description: description
         }
 
         await TransactionRepository.createTransaction(newTransaction)
+
         return res.status(201).json(new ApiResponse(201, 'Transaction creada con exito', newTransaction))
 
     } catch (error) {
@@ -96,7 +99,7 @@ export const getTransactionController = async (req, res, next) => {
         if (!transactions.length) {
             return next(new AppError('No se encontro una transaction con esos parametros', 400))
         }
-
+        
         return res.status(200).json(new ApiResponse(200, 'Busqueda realizada con exito', transactions))
 
     } catch (error) {
@@ -159,6 +162,9 @@ export const updateTransactionController = async (req, res, next) => {
             }
         }
 
+        const amuntEnCentavos = Math.round(Number(update.amount) * 100)
+        update.amount = amuntEnCentavos
+
         const transaction = TransactionRepository.updateTransaction(id, userId, update)
 
         if (!transaction) {
@@ -180,6 +186,7 @@ export const deleteTransactionController = async (req, res, next) => {
         }
 
         const { id } = req.params
+
         if (!id) {
             return next(new AppError('Falta id de la transaction', 400))
         }

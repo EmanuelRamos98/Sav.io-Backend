@@ -77,13 +77,13 @@ export const loginController = async (req, res, next) => {
         const user = await UserRepository.findByIdentifier(identifier)
 
         if (!user) {
-            return next(new AppError('Usuario o contraseña incorrectos', 401))
+            return next(new AppError('Usuario no existente', 401))
         }
 
         const passwordMach = await bcrypt.compare(password, user.password)
 
         if (!passwordMach) {
-            return next(new AppError('Usuario o contraseña incorrectos', 401))
+            return next(new AppError('Contraseña incorrecta', 401))
         }
 
         const TOKEN = jwt.sign(
@@ -92,7 +92,7 @@ export const loginController = async (req, res, next) => {
             { expiresIn: '1d' }
         )
 
-        return res.status(200).json(new ApiResponse(200, 'Login exitoso', TOKEN))
+        return res.status(200).json(new ApiResponse(200, 'Login exitoso', { name: user.name, accessToken: TOKEN }))
 
     } catch (error) {
         return next(error)

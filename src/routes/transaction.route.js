@@ -11,7 +11,7 @@ from '../controllers/transaction.controller.js';
 const transactionRoute = express.Router()
 
 transactionRoute.post('/', authMiddleware, addTransactionController)
-transactionRoute.post('/search', authMiddleware, getTransactionController)
+transactionRoute.get('/search', authMiddleware, getTransactionController)
 transactionRoute.put('/update/:id', authMiddleware, updateTransactionController)
 transactionRoute.delete('/delete/:id', authMiddleware, deleteTransactionController)
 
