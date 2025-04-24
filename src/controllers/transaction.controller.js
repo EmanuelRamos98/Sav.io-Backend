@@ -73,8 +73,7 @@ export const getTransactionController = async (req, res, next) => {
 
         const userId = mongoose.Types.ObjectId.createFromHexString(user);
         const filter = { userId };
-
-        const { type, category, startDate, endDate } = req.body;
+        const { startDate, endDate, category, type } = req.query;
 
         if (type) {
             if (!["income", "expense"].includes(type)) {
@@ -117,12 +116,15 @@ export const getTransactionController = async (req, res, next) => {
         );
 
         if (!transactions.length) {
-            return next(
-                new AppError(
-                    "No se encontro una transaction con esos parametros",
-                    400
-                )
-            );
+            return res
+                .status(200)
+                .json(
+                    new ApiResponse(
+                        200,
+                        "No se encontraron transacciones con esos filtros.",
+                        []
+                    )
+                );
         }
 
         return res
@@ -155,7 +157,7 @@ export const updateTransactionController = async (req, res, next) => {
 
         const validatior = new Validations({ category, amount, description });
 
-        const update = {};
+        let update = {};
 
         if (type) {
             if (!["income", "expense"].includes(type)) {
@@ -171,8 +173,12 @@ export const updateTransactionController = async (req, res, next) => {
             validatior.isString("category").min_max_length("category", 0, 20);
         }
 
-        if (amount) {
-            update.amount = amount;
+        if (amount !== undefined && amount !== null && amount !== "") {
+            const parsed = Number(amount);
+            if (isNaN(parsed)) {
+                return next(new AppError("El monto debe ser un numero", 400));
+            }
+            update.amount = Math.round(parsed * 100);
             validatior.isNumber("amount");
         }
 
@@ -198,10 +204,7 @@ export const updateTransactionController = async (req, res, next) => {
             }
         }
 
-        const amuntEnCentavos = Math.round(Number(update.amount) * 100);
-        update.amount = amuntEnCentavos;
-
-        const transaction = TransactionRepository.updateTransaction(
+        const transaction = await TransactionRepository.updateTransaction(
             id,
             userId,
             update
@@ -223,28 +226,28 @@ export const getTransactionMovementsController = async (req, res, next) => {
     try {
         const userId = req.user.id;
         if (!userId) {
-            return next(new AppError("Falta id del usuario", 400))
+            return next(new AppError("Falta id del usuario", 400));
         }
 
-        const { startDate, endDate } = req.query
+        const { startDate, endDate } = req.query;
 
-        let dateFilter = {}
+        let dateFilter = {};
 
         if (startDate && endDate) {
-            const start = new Date(startDate)
-            const end = new Date(endDate)
-            start.setUTCHours(0, 0, 0, 0)
-            end.setUTCHours(23, 59, 59, 999)
+            const start = new Date(startDate);
+            const end = new Date(endDate);
+            start.setUTCHours(0, 0, 0, 0);
+            end.setUTCHours(23, 59, 59, 999);
 
-            dateFilter.date = { $gte: start, $lte: end }
+            dateFilter.date = { $gte: start, $lte: end };
         }
 
         const filter = {
             userId: mongoose.Types.ObjectId.createFromHexString(userId),
-            ...dateFilter
-        }
+            ...dateFilter,
+        };
 
-        const transaction = await Transaction.find(filter)
+        const transaction = await Transaction.find(filter);
 
         const totals = transaction.reduce(
             (acc, tx) => {
@@ -255,11 +258,14 @@ export const getTransactionMovementsController = async (req, res, next) => {
             },
             { income: 0, expense: 0 }
         );
-        const balance = totals.income - totals.expense
+        const balance = totals.income - totals.expense;
 
-        return res.status(200).json(new ApiResponse(200, "Total calculado con exito", {
-            ...totals, balance
-        }))
+        return res.status(200).json(
+            new ApiResponse(200, "Total calculado con exito", {
+                ...totals,
+                balance,
+            })
+        );
     } catch (error) {
         next(error);
     }
@@ -272,52 +278,56 @@ export const getTransactionCategory = async (req, res, next) => {
             return next(new AppError("Falta el id de usuario", 400));
         }
 
-        const {startDate, endDate} = req.query
+        const { startDate, endDate } = req.query;
 
         let matchFilter = {
-            userId: mongoose.Types.ObjectId.createFromHexString(userId)
+            userId: mongoose.Types.ObjectId.createFromHexString(userId),
         };
 
         if (startDate && endDate) {
-            const start = new Date(startDate)
-            const end = new Date(endDate)
-            start.setUTCHours(0, 0, 0, 0)
-            end.setUTCHours(23, 59, 59, 999)
+            const start = new Date(startDate);
+            const end = new Date(endDate);
+            start.setUTCHours(0, 0, 0, 0);
+            end.setUTCHours(23, 59, 59, 999);
 
-            matchFilter.date = { $gte: start, $lte: end }
+            matchFilter.date = { $gte: start, $lte: end };
         }
 
         const sumary = await Transaction.aggregate([
-            {$match: matchFilter},
+            { $match: matchFilter },
             {
-                $group:{
-                    _id: {category: "$category", type: "$type"},
-                    total: {$sum: "$amount"}
-                }
-            }
-        ])
+                $group: {
+                    _id: { category: "$category", type: "$type" },
+                    total: { $sum: "$amount" },
+                },
+            },
+        ]);
 
-        const result = {}
-        sumary.forEach((item)=>{
-            const category = item._id.category
-            const type = item._id.type
-            const amount = item.total /100
+        const result = {};
+        sumary.forEach((item) => {
+            const category = item._id.category;
+            const type = item._id.type;
+            const amount = item.total / 100;
 
-            const sing = type === "income"?"+":"-"
-            const formattedAmount = `${sing}${amount}`
+            const sing = type === "income" ? "+" : "-";
+            const formattedAmount = `${sing}${amount}`;
 
             if (!result[category]) {
-                result[category]=[formattedAmount]
-            }else{
-                result[category].push(formattedAmount)
+                result[category] = [formattedAmount];
+            } else {
+                result[category].push(formattedAmount);
             }
-        })
+        });
 
-        return res.status(200).json(new ApiResponse(200, "Resumen por categoria con exito", result))
+        return res
+            .status(200)
+            .json(
+                new ApiResponse(200, "Resumen por categoria con exito", result)
+            );
     } catch (error) {
-        next(error)
+        next(error);
     }
-}
+};
 
 export const deleteTransactionController = async (req, res, next) => {
     try {

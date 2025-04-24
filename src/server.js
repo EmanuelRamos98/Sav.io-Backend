@@ -12,7 +12,6 @@ const app = express()
 app.use(cors())
 app.use(express.json());
 
-
 app.use('/api/status', statusRoute)
 app.use('/api/auth', auhtRoute)
 app.use('/api/transaction', transactionRoute)
